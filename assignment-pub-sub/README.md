@@ -5,5 +5,5 @@ The configuration is hardcoded to reach the dedicated Pub/Sub project created in
 How to run the code:
 
 1. Sync dependencies with uv sync if necessary
-2. Run the producer with `uv run main.py --producer-id <producer-id>`
-3. Run the consumer with `uv run main.py --consumer-id <consumer-id>`
+2. Run the producer with `uv run producer --help`
+3. Run the consumer with `uv run consumer --help`
