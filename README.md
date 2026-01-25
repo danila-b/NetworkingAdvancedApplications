@@ -1,2 +1,1 @@
-# NetworkingAdvancedApplications
-# NetworkingAdvancedApplications
+Repository for storing materials from ELEC-E7315 - Networking at Scale and Advanced Applications D Aalto University course
