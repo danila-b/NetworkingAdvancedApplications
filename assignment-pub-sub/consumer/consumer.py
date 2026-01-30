@@ -4,6 +4,7 @@ import statistics
 import threading
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
+import time
 
 from google.cloud import pubsub_v1
 
@@ -235,6 +236,9 @@ def run(
             message_timestamp: datetime = datetime.fromisoformat(data["timestamp"])
             latency_ms: float = (received_time - message_timestamp).total_seconds() * 1000
 
+            # Slow processing simulation
+            if consumer_id == "slow-consumer":
+                time.sleep(0.1) 
             # Record metrics
             metrics.record_message(
                 latency_ms=latency_ms,
