@@ -33,6 +33,37 @@ class ConsumerMetrics:
 
     # Message sequence tracking (to detect out-of-order delivery)
     message_counts: list[int] = field(default_factory=list)
+    
+    def to_dict(self, consumer_id: str) -> dict:
+        """Export raw metrics and summary data for JSON serialization."""
+        with self._lock:
+            return {
+                "consumer_id": consumer_id,
+                "messages_received": self.messages_received,
+                "messages_failed": self.messages_failed,
+                "start_time": self.start_time.isoformat() if self.start_time else None,
+                "end_time": self.end_time.isoformat() if self.end_time else None,
+                "messages": [
+                    {
+                        "count": self.message_counts[i],
+                        "publish_time": self.publish_times[i].isoformat(),
+                        "receive_time": self.receive_times[i].isoformat(),
+                        "latency_ms": self.latencies_ms[i],
+                    }
+                    for i in range(len(self.latencies_ms))
+                ],
+                "summary": {
+                    "avg_latency_ms": statistics.mean(self.latencies_ms)
+                    if self.latencies_ms else 0.0,
+                    "min_latency_ms": min(self.latencies_ms)
+                    if self.latencies_ms else 0.0,
+                    "max_latency_ms": max(self.latencies_ms)
+                    if self.latencies_ms else 0.0,
+                    "p50_latency_ms": self._calculate_percentile(self.latencies_ms, 50),
+                    "p95_latency_ms": self._calculate_percentile(self.latencies_ms, 95),
+                    "p99_latency_ms": self._calculate_percentile(self.latencies_ms, 99),
+                },
+            }
 
     def record_message(
         self,
@@ -182,6 +213,7 @@ class ConsumerMetrics:
             print("=" * 70)
 
 
+
 def run(
     project_id: str,
     subscription_id: str,
@@ -235,6 +267,12 @@ def run(
         metrics.finalize()
         print(f"\nConsumer '{consumer_id}' stopped.")
         metrics.display_summary(consumer_id)
+        
+        # JSON dump
+        output = metrics.to_dict(consumer_id=consumer_id)
+        with open(f"results_{consumer_id}.json", "w") as f:
+            json.dump(output, f, indent=2)
+        print(f"Results saved to results_{consumer_id}.json")
 
 
 def main() -> None:
