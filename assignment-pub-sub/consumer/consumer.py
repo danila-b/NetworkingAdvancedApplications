@@ -7,22 +7,25 @@ from google.cloud import pubsub_v1
 DEFAULT_PROJECT_ID: str = "networkedapps-danila-2026"
 DEFAULT_SUBSCRIPTION_ID: str = "consumer-group-1"
 DEFAULT_CONSUMER_ID: str = "consumer-1"
+DEFAULT_MESSAGE_LIMIT: int = 1000
 
 
 def run(
     project_id: str,
     subscription_id: str,
     consumer_id: str,
+    message_limit: int,
 ) -> None:
     """Subscribes to Pub/Sub messages and processes them until keyboard interrupt is received"""
     subscriber_flow_control = pubsub_v1.types.FlowControl(
-        max_messages=1000,
+        max_messages=message_limit,
     )
 
     subscriber: pubsub_v1.SubscriberClient = pubsub_v1.SubscriberClient()
     subscription_path: str = subscriber.subscription_path(project_id, subscription_id)
 
     print(f"Starting consumer '{consumer_id}' - listening on {subscription_path}")
+    print(f"Flow control max_messages: {message_limit}")
 
     def callback(message: pubsub_v1.subscriber.message.Message) -> None:
         received_time: datetime = datetime.now(timezone.utc)
@@ -78,6 +81,12 @@ def main() -> None:
         default=DEFAULT_CONSUMER_ID,
         help=f"Identity of the consumer (default: {DEFAULT_CONSUMER_ID})",
     )
+    parser.add_argument(
+        "--message-limit",
+        type=int,
+        default=DEFAULT_MESSAGE_LIMIT,
+        help=f"Flow control max messages (default: {DEFAULT_MESSAGE_LIMIT})",
+    )
 
     args: argparse.Namespace = parser.parse_args()
 
@@ -85,6 +94,7 @@ def main() -> None:
         project_id=args.project_id,
         subscription_id=args.subscription_id,
         consumer_id=args.consumer_id,
+        message_limit=args.message_limit,
     )
 
 

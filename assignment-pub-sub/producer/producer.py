@@ -8,18 +8,19 @@ from google.cloud import pubsub_v1
 DEFAULT_PROJECT_ID: str = "networkedapps-danila-2026"
 DEFAULT_TOPIC_ID: str = "pub-sub-task-1"
 DEFAULT_PRODUCER_ID: str = "producer-1"
-DEFAULT_NUM_MESSAGES: int = 100
+DEFAULT_MESSAGE_LIMIT: int = 1000
+NUM_MESSAGES: int = 100
 
 
 def run(
     project_id: str,
     topic_id: str,
     producer_id: str,
-    num_messages: int,
+    message_limit: int,
 ) -> None:
-    """Publishes messages to Pub/Sub in parallel with flow control"""
+    """Publishes 100 messages to Pub/Sub in parallel with flow control"""
     publisher_flow_control_settings = pubsub_v1.types.PublishFlowControl(
-        message_limit=1000,  # 1000 messages
+        message_limit=message_limit,
         limit_exceeded_behavior=pubsub_v1.types.LimitExceededBehavior.BLOCK,
     )
 
@@ -31,11 +32,12 @@ def run(
     topic_path: str = publisher.topic_path(project_id, topic_id)
 
     print(f"Starting producer '{producer_id}' - publishing to {topic_path}")
-    print(f"Publishing {num_messages} messages in parallel...")
+    print(f"Flow control message_limit: {message_limit}")
+    print(f"Publishing {NUM_MESSAGES} messages in parallel...")
 
     publish_futures: list = []
 
-    for count in range(1, num_messages + 1):
+    for count in range(1, NUM_MESSAGES + 1):
         message: dict[str, str | int] = {
             "source": producer_id,
             "timestamp": datetime.now(timezone.utc).isoformat(),
@@ -59,7 +61,7 @@ def run(
         except Exception as e:
             print(f"Failed to publish message {i}: {e}")
 
-    print(f"Successfully published {success_count}/{num_messages} messages")
+    print(f"Successfully published {success_count}/{NUM_MESSAGES} messages")
 
 
 def main() -> None:
@@ -85,10 +87,10 @@ def main() -> None:
         help=f"Identity of the producer (default: {DEFAULT_PRODUCER_ID})",
     )
     parser.add_argument(
-        "--num-messages",
+        "--message-limit",
         type=int,
-        default=DEFAULT_NUM_MESSAGES,
-        help=f"Number of messages to publish (default: {DEFAULT_NUM_MESSAGES})",
+        default=DEFAULT_MESSAGE_LIMIT,
+        help=f"Flow control message limit (default: {DEFAULT_MESSAGE_LIMIT})",
     )
 
     args: argparse.Namespace = parser.parse_args()
@@ -97,7 +99,7 @@ def main() -> None:
         project_id=args.project_id,
         topic_id=args.topic_id,
         producer_id=args.producer_id,
-        num_messages=args.num_messages,
+        message_limit=args.message_limit,
     )
 
 
