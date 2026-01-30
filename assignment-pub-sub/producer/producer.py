@@ -1,6 +1,6 @@
 import argparse
 import json
-import time
+from concurrent import futures
 from datetime import datetime, timezone
 
 from google.cloud import pubsub_v1
@@ -8,24 +8,34 @@ from google.cloud import pubsub_v1
 DEFAULT_PROJECT_ID: str = "networkedapps-danila-2026"
 DEFAULT_TOPIC_ID: str = "pub-sub-task-1"
 DEFAULT_PRODUCER_ID: str = "producer-1"
-DEFAULT_PUBLISH_INTERVAL: int = 1
+DEFAULT_NUM_MESSAGES: int = 100
 
 
 def run(
     project_id: str,
     topic_id: str,
     producer_id: str,
-    publish_interval: int,
+    num_messages: int,
 ) -> None:
-    """Publishes messages to Pub/Sub indefinitely."""
-    publisher: pubsub_v1.PublisherClient = pubsub_v1.PublisherClient()
+    """Publishes messages to Pub/Sub in parallel with flow control"""
+    publisher_flow_control_settings = pubsub_v1.types.PublishFlowControl(
+        message_limit=1000,  # 1000 messages
+        limit_exceeded_behavior=pubsub_v1.types.LimitExceededBehavior.BLOCK,
+    )
+
+    publisher: pubsub_v1.PublisherClient = pubsub_v1.PublisherClient(
+        publisher_options=pubsub_v1.types.PublisherOptions(
+            flow_control=publisher_flow_control_settings,
+        ),
+    )
     topic_path: str = publisher.topic_path(project_id, topic_id)
 
-    count: int = 1
-
     print(f"Starting producer '{producer_id}' - publishing to {topic_path}")
+    print(f"Publishing {num_messages} messages in parallel...")
 
-    while True:
+    publish_futures: list = []
+
+    for count in range(1, num_messages + 1):
         message: dict[str, str | int] = {
             "source": producer_id,
             "timestamp": datetime.now(timezone.utc).isoformat(),
@@ -34,12 +44,22 @@ def run(
 
         message_bytes: bytes = json.dumps(message).encode("utf-8")
         future = publisher.publish(topic_path, message_bytes)
-        message_id: str = future.result()
+        publish_futures.append(future)
 
-        print(f"Published message {count} with ID: {message_id}")
+    # Wait for all publish operations to complete
+    print(f"Waiting for {len(publish_futures)} messages to be published...")
+    futures.wait(publish_futures, return_when=futures.ALL_COMPLETED)
 
-        count += 1
-        time.sleep(publish_interval)
+    success_count = 0
+    for i, future in enumerate(publish_futures, 1):
+        try:
+            message_id = future.result()
+            print(f"Published message {i} with ID: {message_id}")
+            success_count += 1
+        except Exception as e:
+            print(f"Failed to publish message {i}: {e}")
+
+    print(f"Successfully published {success_count}/{num_messages} messages")
 
 
 def main() -> None:
@@ -65,10 +85,10 @@ def main() -> None:
         help=f"Identity of the producer (default: {DEFAULT_PRODUCER_ID})",
     )
     parser.add_argument(
-        "--publish-interval",
+        "--num-messages",
         type=int,
-        default=DEFAULT_PUBLISH_INTERVAL,
-        help=f"Interval between messages in seconds (default: {DEFAULT_PUBLISH_INTERVAL})",
+        default=DEFAULT_NUM_MESSAGES,
+        help=f"Number of messages to publish (default: {DEFAULT_NUM_MESSAGES})",
     )
 
     args: argparse.Namespace = parser.parse_args()
@@ -77,7 +97,7 @@ def main() -> None:
         project_id=args.project_id,
         topic_id=args.topic_id,
         producer_id=args.producer_id,
-        publish_interval=args.publish_interval,
+        num_messages=args.num_messages,
     )
 
 

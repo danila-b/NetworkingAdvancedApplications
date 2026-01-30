@@ -14,7 +14,11 @@ def run(
     subscription_id: str,
     consumer_id: str,
 ) -> None:
-    """Subscribes to Pub/Sub messages and processes them indefinitely."""
+    """Subscribes to Pub/Sub messages and processes them until keyboard interrupt is received"""
+    subscriber_flow_control = pubsub_v1.types.FlowControl(
+        max_messages=1000,
+    )
+
     subscriber: pubsub_v1.SubscriberClient = pubsub_v1.SubscriberClient()
     subscription_path: str = subscriber.subscription_path(project_id, subscription_id)
 
@@ -37,7 +41,11 @@ def run(
 
         message.ack()
 
-    streaming_pull_future = subscriber.subscribe(subscription_path, callback=callback)
+    streaming_pull_future = subscriber.subscribe(
+        subscription_path,
+        callback=callback,
+        flow_control=subscriber_flow_control,
+    )
     print(f"Consumer '{consumer_id}' is now listening for messages...")
 
     try:
