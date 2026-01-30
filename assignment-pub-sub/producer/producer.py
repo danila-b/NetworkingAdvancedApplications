@@ -21,7 +21,7 @@ def run(
     """Publishes 100 messages to Pub/Sub in parallel with flow control"""
     publisher_flow_control_settings = pubsub_v1.types.PublishFlowControl(
         message_limit=message_limit,
-        limit_exceeded_behavior=pubsub_v1.types.LimitExceededBehavior.BLOCK,
+        limit_exceeded_behavior=pubsub_v1.types.LimitExceededBehavior.ERROR,
     )
 
     publisher: pubsub_v1.PublisherClient = pubsub_v1.PublisherClient(
