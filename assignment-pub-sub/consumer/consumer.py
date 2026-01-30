@@ -255,7 +255,7 @@ def run(
             metrics.record_failure()
             print(f"[{consumer_id}] Error processing message: {e}")
 
-        message.ack()
+        message.nack()
 
     streaming_pull_future = subscriber.subscribe(
         subscription_path,
