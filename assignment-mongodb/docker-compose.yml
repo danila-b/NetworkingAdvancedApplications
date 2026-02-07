@@ -1,0 +1,69 @@
+services:
+  mongo1:
+    build: .
+    container_name: mongo1
+    networks:
+      - mongo_network
+    cap_add:
+      - NET_ADMIN
+    command: [
+      "--replSet", "rs0",
+      "--bind_ip_all",
+      "--port", "27017"
+    ]
+    ports:
+      - 27017:27017
+    volumes:
+      - "mongo1_data:/data/db"
+      - "mongo1_config:/data/configdb"
+
+  mongo2:
+    build: .
+    container_name: mongo2
+    networks:
+      - mongo_network
+    cap_add:
+      - NET_ADMIN
+    command: [
+      "--replSet", "rs0",
+      "--bind_ip_all",
+      "--port", "27018"
+    ]
+    ports:
+      - 27018:27018
+    volumes:
+      - "mongo2_data:/data/db"
+      - "mongo2_config:/data/configdb"
+
+  mongo3:
+    build: .
+    container_name: mongo3
+    networks:
+      - mongo_network
+    cap_add:
+      - NET_ADMIN
+    command: [
+      "--replSet", "rs0",
+      "--bind_ip_all",
+      "--port", "27019"
+    ]
+    ports:
+      - 27019:27019
+    volumes:
+      - "mongo3_data:/data/db"
+      - "mongo3_config:/data/configdb"
+
+
+
+volumes:
+  mongo1_data:
+  mongo2_data:
+  mongo3_data:
+  mongo1_config:
+  mongo2_config:
+  mongo3_config:
+
+networks:
+  mongo_network:
+    name: mongo_network
+    driver: bridge
