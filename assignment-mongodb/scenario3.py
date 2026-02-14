@@ -186,10 +186,12 @@ def parse_args():
 
 def create_clients():
 
-    MONGODB_RS_URI = "mongodb://mongo1:27017,mongo2:27018,mongo3:27019/"
-    MONGODB1_URI = "mongodb://mongo1:27017/"
-    MONGODB2_URI = "mongodb://mongo2:27018/"
-    MONGODB3_URI = "mongodb://mongo3:27019/"
+    # containers are reachable from the host via the published ports —
+    # use localhost when running this script on the host machine.
+    MONGODB_RS_URI = "mongodb://localhost:27017,localhost:27018,localhost:27019/"
+    MONGODB1_URI = "mongodb://localhost:27017/"
+    MONGODB2_URI = "mongodb://localhost:27018/"
+    MONGODB3_URI = "mongodb://localhost:27019/"
 
     client_mongo1_direct = MongoClientFactory.create_client(
         "direct",
@@ -206,10 +208,14 @@ def create_clients():
         MONGODB3_URI
     )
 
-    client_replicaset = MongoClientFactory.create_client(
-        "replica",
-        MONGODB_RS_URI
-    )
+    try:
+        client_replicaset = MongoClientFactory.create_client(
+            "replica",
+            MONGODB_RS_URI
+        )
+    except Exception:
+        logger.warning("Replica-set client unavailable from host; falling back to primary direct client")
+        client_replicaset = client_mongo1_direct
 
     return client_mongo1_direct, client_mongo2_direct, client_mongo3_direct, client_replicaset
 
