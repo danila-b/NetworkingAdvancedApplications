@@ -1,0 +1,112 @@
+services:
+  mongodb:
+    image: mongo:8
+    container_name: mongodb
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+      - ./mongo-init:/docker-entrypoint-initdb.d
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: example
+      MONGO_INITDB_DATABASE: product_catalog
+    networks:
+      - caching_network
+  mongo-express:
+    container_name: mongo-express
+    image: mongo-express:latest
+    ports:
+      - "8082:8081"
+    environment:
+      ME_CONFIG_MONGODB_ADMINUSERNAME: root
+      ME_CONFIG_MONGODB_ADMINPASSWORD: example
+      ME_CONFIG_MONGODB_URL: mongodb://root:example@mongodb:27017/
+    depends_on:
+      - mongodb
+    networks:
+      - caching_network
+  redis1:
+    image: redis:7
+    container_name: redis1
+    command: redis-server --port 6379 --cluster-enabled yes --cluster-config-file nodes.conf --cluster-node-timeout 5000 --cluster-announce-ip redis1
+    ports:
+      - "6379:6379"
+    networks:
+      - caching_network
+  redis2:
+    image: redis:7
+    container_name: redis2
+    command: redis-server --port 6379 --cluster-enabled yes --cluster-config-file nodes.conf --cluster-node-timeout 5000 --cluster-announce-ip redis2
+    ports:
+      - "6380:6379"
+    networks:
+      - caching_network
+  redis3:
+    image: redis:7
+    container_name: redis3
+    command: redis-server --port 6379 --cluster-enabled yes --cluster-config-file nodes.conf --cluster-node-timeout 5000 --cluster-announce-ip redis3
+    ports:
+      - "6381:6379"
+    networks:
+      - caching_network
+  redis-cluster-init:
+    image: redis:7
+    depends_on:
+      - redis1
+      - redis2
+      - redis3
+    command: redis-cli --cluster create redis1:6379 redis2:6379 redis3:6379 --cluster-yes --cluster-replicas 0
+    networks:
+      - caching_network
+  redis-commander:
+    container_name: redis-commander
+    image: rediscommander/redis-commander:latest
+    ports:
+      - "8081:8081"
+    environment:
+      - REDIS_HOSTS=node1:redis1:6379,node2:redis2:6379,node3:redis3:6379
+    depends_on:
+      - redis1
+      - redis2
+      - redis3
+    networks:
+      - caching_network
+  backend:
+    container_name: backend
+    build:
+      context: src/.
+      dockerfile: Dockerfile
+    ports:
+      - "8080:80"
+    environment:
+      - MONGO_URI=mongodb://root:example@mongodb:27017/
+      - REDIS_URI=redis://redis1:6379/0,redis://redis2:6379/0,redis://redis3:6379/0
+    depends_on:
+      - mongodb
+      - redis1
+      - redis2
+      - redis3
+    deploy:
+      restart_policy:
+        condition: on-failure
+        delay: 2s
+        max_attempts: 10
+    cap_add:
+      - NET_ADMIN
+    networks:
+      - caching_network
+  k6:
+    image: grafana/k6:latest
+    volumes:
+      - ./k6_scripts:/scripts
+    networks:
+      - caching_network
+
+volumes:
+  mongodb_data:
+
+networks:
+  caching_network:
+    name: caching_network
+    driver: bridge
