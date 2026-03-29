@@ -1,0 +1,23 @@
+prometheus:
+  url: http://kube-prom-stack-kube-prome-prometheus.observability.svc
+  port: 9090
+
+rules:
+  default: false
+  custom:
+  - seriesQuery: 'http_request_duration_seconds_bucket{job="products",path="/products",namespace="default"}'  # Raw metric series
+    resources:
+      overrides:
+        namespace: {resource: "namespace"}
+        pod: {resource: "pod"}
+    name:
+      matches: "http_request_duration_seconds_bucket"
+      as: "p95_threshold_latency_products"  # What HPA will use
+    metricsQuery: 'histogram_quantile(0.95, sum(rate(<<.Series>>{<<.LabelMatchers>>}[1m])) by (le, pod, namespace))'
+
+# Make sure prometheus-adapter can discover your Prometheus instance
+rbac:
+  create: true
+
+serviceAccount:
+  create: true

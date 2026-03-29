@@ -1,0 +1,20 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: prometheus-nodeport
+  namespace: observability
+  labels:
+    app: kube-prometheus-stack-prometheus
+spec:
+  type: NodePort
+  ports:
+    - port: 9090
+      targetPort: 9090
+      nodePort: 30090  # You can change this to any port between 30000-32767
+      protocol: TCP
+      name: http-web
+  selector:
+    app.kubernetes.io/name: prometheus
+    prometheus: kube-prom-stack-kube-prome-prometheus
+
+    

@@ -1,0 +1,17 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: products-monitor
+  namespace: observability  # Place ServiceMonitor in same namespace as Prometheus
+  labels:
+    release: kube-prom-stack  # should match prometheus
+spec:
+  namespaceSelector:
+    matchNames:
+      - default  # Specify the namespace to monitor
+  selector:
+    matchLabels:
+      app: products
+  endpoints:
+  - port: http
+    path: /metrics
