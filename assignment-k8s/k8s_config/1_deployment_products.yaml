@@ -15,6 +15,7 @@ spec:
       containers:
       - name: products
         image: products:local
+        imagePullPolicy: Never
         ports:
         - containerPort: 8000
         livenessProbe:
