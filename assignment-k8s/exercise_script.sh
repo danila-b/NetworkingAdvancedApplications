@@ -18,6 +18,7 @@ e5_build_images() {
     (
         # Add --progress=plain to see more build output for debugging
         docker build \
+            --provenance=false \
             -t "$image_name:$tag" \
             -f "Dockerfile.$image_name" . && \
         docker save "$image_name:$tag" > "$image_name.tar" && \
