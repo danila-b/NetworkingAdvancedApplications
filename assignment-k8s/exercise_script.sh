@@ -21,9 +21,9 @@ e5_build_images() {
             -t "$image_name:$tag" \
             -f "Dockerfile.$image_name" . && \
         docker save "$image_name:$tag" > "$image_name.tar" && \
-        microk8s ctr images delete "docker.io/library/$image_name:$tag" 2>/dev/null || true && \
-        microk8s ctr image import "$image_name.tar" && \
-        microk8s ctr images ls | grep "$image_name" && \
+        microk8s ctr --namespace k8s.io images delete "docker.io/library/$image_name:$tag" 2>/dev/null || true && \
+        microk8s ctr --namespace k8s.io image import "$image_name.tar" && \
+        microk8s ctr --namespace k8s.io images ls | grep "$image_name" && \
         rm "$image_name.tar"
     )
 
